@@ -1,13 +1,18 @@
 import argparse
 import json
 import openml
+import os
+import pickle
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Surrogated Active Testing')
+    parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
+                        help='directory to store cache')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
     parser.add_argument('--flow_id', type=int, default=6952, help='openml flow id')
-    parser.add_argument('--relevant_parameters', type=json.loads, default='{"C": 0, "gamma": 0, "kernel": 0, "coef0": 0, "tol": 0}')
+    parser.add_argument('--relevant_parameters', type=json.loads,
+                        default='{"C": 0, "gamma": 0, "kernel": 0, "coef0": 0, "tol": 0}')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
     parser.add_argument('--openml_apikey', type=str, default=None, help='the apikey to authenticate to OpenML')
     return parser.parse_args()
@@ -15,20 +20,53 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    cache_directory = args.cache_directory + '/' + str(args.flow_id)
+    study_cache_path = cache_directory + '/study.pkl'
+    try:
+        os.makedirs(cache_directory)
+    except FileExistsError:
+        pass
 
-    study = openml.study.get_study(args.study_id, 'tasks')
+    if not os.path.isfile(study_cache_path):
+        study = openml.study.get_study(args.study_id, 'tasks')
+        with open(study_cache_path, 'wb') as fp:
+            pickle.dump(study, fp, 0)
+
+    with open(study_cache_path, 'rb') as fp:
+        study = pickle.load(fp)
+
     relevant_parameters = list(args.relevant_parameters.keys())
 
     for task_id in study.tasks:
+        try:
+            os.makedirs(cache_directory + '/' + str(task_id))
+        except FileExistsError:
+            pass
+
         # grab 200 random evaluations
-        evaluations = openml.evaluations.list_evaluations("predictive_accuracy", size=200, task=[task_id], flow=[args.flow_id])
+        evaluations_cache_path = cache_directory + '/' + str(task_id) + '/evaluations.pkl'
+        setups_cache_path = cache_directory + '/' + str(task_id) + '/setups.pkl'
+        if not os.path.isfile(evaluations_cache_path) or not os.path.isfile(setups_cache_path):
+            study = openml.study.get_study(args.study_id, 'tasks')
+            evaluations = openml.evaluations.list_evaluations('predictive_accuracy', size=200, task=[task_id],
+                                                              flow=[args.flow_id])
+            with open(evaluations_cache_path, 'wb') as fp:
+                pickle.dump(evaluations, fp)
 
-        # setups
-        setup_ids = []
-        for run_id, evaluation in evaluations.items():
-            setup_ids.append(evaluation.setup_id)
+            # setups
+            setup_ids = []
+            for run_id, evaluation in evaluations.items():
+                setup_ids.append(evaluation.setup_id)
+            setups = openml.setups.list_setups(setup=setup_ids)
 
-        setups = openml.setups.list_setups(setup=setup_ids)
+            with open(setups_cache_path, 'wb') as fp:
+                pickle.dump(setups, fp)
+
+        with open(evaluations_cache_path, 'rb') as fp:
+            evaluations = pickle.load(fp)
+        with open(setups_cache_path, 'rb') as fp:
+            setups = pickle.load(fp)
+
         setup_parameters = {}
 
         for setup_id, setup in setups.items():
