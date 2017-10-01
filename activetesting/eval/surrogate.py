@@ -5,10 +5,9 @@ import numpy as np
 import openml
 import os
 import pickle
-import sklearn
 
 from scipy.stats import pearsonr
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.externals import joblib
 from sklearn.model_selection import cross_val_score, cross_val_predict
 
 
@@ -21,6 +20,7 @@ def parse_args():
     parser.add_argument('--relevant_parameters', type=json.loads, default='{"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric", "tol": "numeric"}')
     parser.add_argument('--scoring', type=str, default='neg_mean_absolute_error')
     parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
+    parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
     parser.add_argument('--openml_apikey', type=str, default=None, help='the apikey to authenticate to OpenML')
     return parser.parse_args()
@@ -45,18 +45,38 @@ if __name__ == '__main__':
         study = pickle.load(fp)
 
     for task_id in study.tasks:
-        X, y, categoricals = activetesting.utils.get_X_y_from_openml(task_id, args.flow_id, args.num_runs, args.relevant_parameters, cache_directory)
+        X, y, column_names, categoricals = activetesting.utils.get_X_y_from_openml(task_id,
+                                                                                   args.flow_id,
+                                                                                   args.num_runs,
+                                                                                   args.relevant_parameters,
+                                                                                   cache_directory)
         X, cat_mapping = activetesting.utils.encode_categoricals(X, categoricals)
 
-        clf = sklearn.pipeline.Pipeline(steps=[('encoder', sklearn.preprocessing.OneHotEncoder(categorical_features=list(categoricals))),
-                                               ('classifier', RandomForestRegressor())])
+        model_cache_directory = cache_directory + '/' + str(task_id)
+        model_cache_filename = 'RandForest_' + str(args.num_runs) + '.pkl'
+
+        if not os.path.isfile(model_cache_directory + '/' + model_cache_filename) or args.prevent_model_cache:
+            activetesting.utils.cache_model(X, y, categoricals, model_cache_directory, model_cache_filename)
+
+        clf = joblib.load(model_cache_directory + '/' + model_cache_filename)
+
         y_hat = cross_val_predict(clf, X, y, cv=10)
         scores = cross_val_score(clf, X, y, cv=10, scoring=args.scoring)
         spearman = pearsonr(y, y_hat)
         all_scores.append(scores.mean())
-        print("Task %d; Ranges: [%2f-%2f]; Pearson Spearman Correlation: %f; MSE: %0.4f (+/- %0.4f)" %(task_id, min(y), max(y), spearman[0], scores.mean(), scores.std() * 2))
+        print("Task %d; Ranges: [%2f-%2f]; Pearson Spearman Correlation: %f; MSE: %0.4f (+/- %0.4f)" %(task_id,
+                                                                                                       min(y), max(y),
+                                                                                                       spearman[0],
+                                                                                                       scores.mean(),
+                                                                                                       scores.std() * 2))
 
-        average_rank = activetesting.strategies.modelbased_tablelookup_average_ranking(study.tasks, task_id, args.flow_id, args.num_runs, args.relevant_parameters, cache_directory)
+        average_rank = activetesting.strategies.modelbased_tablelookup_average_ranking(study.tasks,
+                                                                                       task_id,
+                                                                                       args.flow_id,
+                                                                                       args.num_runs,
+                                                                                       args.relevant_parameters,
+                                                                                       cache_directory,
+                                                                                       args.prevent_model_cache)
         ar_spearman = pearsonr(y, average_rank)
         print("Task %d; Average Rank: Pearson Spearman Correlation: %f" % (task_id, ar_spearman[0]))
 

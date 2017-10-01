@@ -55,11 +55,6 @@ def get_X_y_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_d
 
     y = []
     dataframe = pd.DataFrame(columns=relevant_parameters.keys())
-    # TODO: pandas can provide this information as well, I guess
-    categoricals = set()
-    for idx, param in enumerate(relevant_parameters):
-        if relevant_parameters[param] == 'categorical':
-            categoricals.add(idx)
 
     for run_id, evaluation in evaluations.items():
         currentX = {}
@@ -77,4 +72,8 @@ def get_X_y_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_d
     if y.shape[0] > num_runs:
         raise ValueError()
 
-    return dataframe.as_matrix(), y, categoricals
+    dataframe = dataframe.reindex_axis(sorted(dataframe.columns), axis=1)
+    categorical_columns = set(dataframe.columns) - set(dataframe._get_numeric_data().columns)
+    categorical_indices = {dataframe.columns.get_loc(col_name) for col_name in categorical_columns}
+
+    return dataframe.as_matrix(), y, dataframe.columns.values, categorical_indices
