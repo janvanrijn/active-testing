@@ -1,3 +1,3 @@
 from .connect import get_X_y_from_openml
 from .convert import encode_categoricals
-from .models import cache_model
+from .models import ModelCacheController

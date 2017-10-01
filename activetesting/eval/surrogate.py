@@ -30,6 +30,7 @@ if __name__ == '__main__':
     args = parse_args()
     cache_directory = args.cache_directory + '/' + str(args.flow_id)
     study_cache_path = cache_directory + '/study.pkl'
+    cache_controller = activetesting.utils.ModelCacheController()
     all_scores = []
     try:
         os.makedirs(cache_directory)
@@ -45,20 +46,21 @@ if __name__ == '__main__':
         study = pickle.load(fp)
 
     for task_id in study.tasks:
-        X, y, column_names, categoricals = activetesting.utils.get_X_y_from_openml(task_id,
-                                                                                   args.flow_id,
-                                                                                   args.num_runs,
-                                                                                   args.relevant_parameters,
-                                                                                   cache_directory)
+        X, y, column_names, categoricals = activetesting.utils.get_X_y_from_openml(task_id=task_id,
+                                                                                   flow_id=args.flow_id,
+                                                                                   num_runs=args.num_runs,
+                                                                                   relevant_parameters=args.relevant_parameters,
+                                                                                   cache_directory=cache_directory)
         X, cat_mapping = activetesting.utils.encode_categoricals(X, categoricals)
 
         model_cache_directory = cache_directory + '/' + str(task_id)
         model_cache_filename = 'RandForest_' + str(args.num_runs) + '.pkl'
 
-        if not os.path.isfile(model_cache_directory + '/' + model_cache_filename) or args.prevent_model_cache:
-            activetesting.utils.cache_model(X, y, categoricals, model_cache_directory, model_cache_filename)
-
-        clf = joblib.load(model_cache_directory + '/' + model_cache_filename)
+        clf = cache_controller.retrieve(X=X, y=y,
+                                        cat_indices=categoricals,
+                                        cache_directory=model_cache_directory,
+                                        filename=model_cache_filename,
+                                        prevent_cache=args.prevent_model_cache)
 
         y_hat = cross_val_predict(clf, X, y, cv=10)
         scores = cross_val_score(clf, X, y, cv=10, scoring=args.scoring)
@@ -70,13 +72,14 @@ if __name__ == '__main__':
                                                                                                        scores.mean(),
                                                                                                        scores.std() * 2))
 
-        average_rank = activetesting.strategies.modelbased_tablelookup_average_ranking(study.tasks,
-                                                                                       task_id,
-                                                                                       args.flow_id,
-                                                                                       args.num_runs,
-                                                                                       args.relevant_parameters,
-                                                                                       cache_directory,
-                                                                                       args.prevent_model_cache)
+        average_rank = activetesting.strategies.modelbased_tablelookup_average_ranking(task_ids=study.tasks,
+                                                                                       holdout_task_id=task_id,
+                                                                                       flow_id=args.flow_id,
+                                                                                       num_runs=args.num_runs,
+                                                                                       relevant_parameters=args.relevant_parameters,
+                                                                                       cache_controller=cache_controller,
+                                                                                       cache_directory=cache_directory,
+                                                                                       prevent_model_cache=args.prevent_model_cache)
         ar_spearman = pearsonr(y, average_rank)
         print("Task %d; Average Rank: Pearson Spearman Correlation: %f" % (task_id, ar_spearman[0]))
 
