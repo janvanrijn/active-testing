@@ -5,6 +5,8 @@ import numpy as np
 import openml
 import os
 import pickle
+import sklearn
+
 from scipy.stats import pearsonr
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score, cross_val_predict
@@ -43,8 +45,11 @@ if __name__ == '__main__':
         study = pickle.load(fp)
 
     for task_id in study.tasks:
-        X, y = activetesting.utils.get_X_y_from_openml(task_id, args.flow_id, args.num_runs, args.relevant_parameters, cache_directory)
-        clf = RandomForestRegressor()
+        X, y, categoricals = activetesting.utils.get_X_y_from_openml(task_id, args.flow_id, args.num_runs, args.relevant_parameters, cache_directory)
+        X, cat_mapping = activetesting.utils.encode_categoricals(X, categoricals)
+
+        clf = sklearn.pipeline.Pipeline(steps=[('encoder', sklearn.preprocessing.OneHotEncoder(categorical_features=list(categoricals))),
+                                               ('classifier', RandomForestRegressor())])
         y_hat = cross_val_predict(clf, X, y, cv=10)
         scores = cross_val_score(clf, X, y, cv=10, scoring=args.scoring)
         spearman = pearsonr(y, y_hat)

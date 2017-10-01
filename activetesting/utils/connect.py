@@ -50,12 +50,15 @@ def get_X_y_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_d
                 raise ValueError('Duplicate hyperparameter:', name, 'Values:', value, hyperparameters[name])
             hyperparameters[name] = value
         setup_parameters[setup_id] = hyperparameters
+        if len(hyperparameters) != len(relevant_parameters):
+            raise ValueError()
 
     y = []
     dataframe = pd.DataFrame(columns=relevant_parameters.keys())
+    # TODO: pandas can provide this information as well, I guess
     categoricals = set()
     for idx, param in enumerate(relevant_parameters):
-        if relevant_parameters[param]:
+        if relevant_parameters[param] == 'categorical':
             categoricals.add(idx)
 
     for run_id, evaluation in evaluations.items():
@@ -65,12 +68,13 @@ def get_X_y_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_d
 
         dataframe = dataframe.append(currentX, ignore_index=True)
         y.append(float(evaluation.value))
-    X = np.array(pd.get_dummies(dataframe).as_matrix())
     y = np.array(y)
 
-    if X.shape[0] > num_runs:
+    if dataframe.shape[0] > num_runs:
+        raise ValueError()
+    if dataframe.shape[1] != len(relevant_parameters):
         raise ValueError()
     if y.shape[0] > num_runs:
         raise ValueError()
 
-    return X, y
+    return dataframe.as_matrix(), y, categoricals
