@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
     parser.add_argument('--openml_apikey', type=str, default=None, help='the apikey to authenticate to OpenML')
-    parser.add_argument('--num_tasks', type=int, default=None, help='limit number of tasks (for testing)')
+    parser.add_argument('--num_tasks', type=int, default=5, help='limit number of tasks (for testing)')
     return parser.parse_args()
 
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     study_cache_path = cache_directory + '/study.pkl'
     cache_controller = activetesting.utils.ModelCacheController()
     all_scores = []
-    loss_curves = {}
+    task_losscurve = {}
     try:
         os.makedirs(cache_directory)
     except FileExistsError:
@@ -88,9 +88,10 @@ if __name__ == '__main__':
         ar_spearman = pearsonr(y, average_rank)
         best_index = ar_spearman.index(min(ar_spearman))
         regret = max(y) - y[best_index]
-        loss_curves[task_id] = activetesting.utils.ranks_to_losscurve(average_rank, y)
+        task_losscurve[task_id] = activetesting.utils.ranks_to_losscurve(average_rank, y)
         print("Task %d; Average Rank: Pearson Spearman Correlation: %f; Regret@1: %f" % (task_id, ar_spearman[0], regret))
 
         # TODO: correlation coefficient :)
     print("ALL: ", np.mean(all_scores))
-    activetesting.utils.plot_loss_curves(loss_curves, args.cache_directory, 'avg_rank.pdf')
+    activetesting.utils.plot_loss_curves(task_losscurve, args.cache_directory, 'avg_rank.pdf')
+    print(activetesting.utils.task_losscurve_to_avg_losscurve(task_losscurve, args.num_runs))

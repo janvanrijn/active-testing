@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 
+
 def encode_categoricals(X, categoricals, mapping_orig=None):
     if mapping_orig is None:
         mapping = dict()
@@ -19,3 +20,13 @@ def encode_categoricals(X, categoricals, mapping_orig=None):
                 mapping[feat_idx][value] = len(mapping[feat_idx])
             X[obs_idx][feat_idx] = mapping[feat_idx][value]
     return np.array(X, dtype=np.float64), mapping
+
+
+def X_data_to_list_of_dicts(X, column_names):
+    result = []
+    for _, observation in enumerate(X):
+        current_dict = {}
+        for feature_idx, column in enumerate(column_names):
+            current_dict[column_names[feature_idx]] = observation[feature_idx]
+        result.append(current_dict)
+    return result
