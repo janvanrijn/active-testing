@@ -5,9 +5,9 @@ import numpy as np
 import openml
 import os
 import pickle
+import random
 
 from scipy.stats import pearsonr
-from sklearn.externals import joblib
 from sklearn.model_selection import cross_val_score, cross_val_predict
 
 
@@ -23,6 +23,7 @@ def parse_args():
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
     parser.add_argument('--openml_apikey', type=str, default=None, help='the apikey to authenticate to OpenML')
+    parser.add_argument('--num_tasks', type=int, default=None, help='limit number of tasks (for testing)')
     return parser.parse_args()
 
 
@@ -32,6 +33,7 @@ if __name__ == '__main__':
     study_cache_path = cache_directory + '/study.pkl'
     cache_controller = activetesting.utils.ModelCacheController()
     all_scores = []
+    loss_curves = {}
     try:
         os.makedirs(cache_directory)
     except FileExistsError:
@@ -44,8 +46,11 @@ if __name__ == '__main__':
 
     with open(study_cache_path, 'rb') as fp:
         study = pickle.load(fp)
+    all_tasks = study.tasks
+    if args.num_tasks:
+        all_tasks = random.sample(all_tasks, args.num_tasks)
 
-    for task_id in study.tasks:
+    for task_id in all_tasks:
         X, y, column_names, categoricals = activetesting.utils.get_X_y_from_openml(task_id=task_id,
                                                                                    flow_id=args.flow_id,
                                                                                    num_runs=args.num_runs,
@@ -72,7 +77,7 @@ if __name__ == '__main__':
                                                                                                        scores.mean(),
                                                                                                        scores.std() * 2))
 
-        average_rank = activetesting.strategies.modelbased_tablelookup_average_ranking(task_ids=study.tasks,
+        average_rank = activetesting.strategies.modelbased_tablelookup_average_ranking(task_ids=all_tasks,
                                                                                        holdout_task_id=task_id,
                                                                                        flow_id=args.flow_id,
                                                                                        num_runs=args.num_runs,
@@ -81,7 +86,11 @@ if __name__ == '__main__':
                                                                                        cache_directory=cache_directory,
                                                                                        prevent_model_cache=args.prevent_model_cache)
         ar_spearman = pearsonr(y, average_rank)
-        print("Task %d; Average Rank: Pearson Spearman Correlation: %f" % (task_id, ar_spearman[0]))
+        best_index = ar_spearman.index(min(ar_spearman))
+        regret = max(y) - y[best_index]
+        loss_curves[task_id] = activetesting.utils.ranks_to_losscurve(average_rank, y)
+        print("Task %d; Average Rank: Pearson Spearman Correlation: %f; Regret@1: %f" % (task_id, ar_spearman[0], regret))
 
         # TODO: correlation coefficient :)
     print("ALL: ", np.mean(all_scores))
+    activetesting.utils.plot_loss_curves(loss_curves, args.cache_directory, 'avg_rank.pdf')
