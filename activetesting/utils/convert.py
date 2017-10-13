@@ -1,3 +1,4 @@
+import arff
 import numpy as np
 import warnings
 
@@ -30,3 +31,20 @@ def X_data_to_list_of_dicts(X, column_names):
             current_dict[column_names[feature_idx]] = observation[feature_idx]
         result.append(current_dict)
     return result
+
+
+def X_and_y_to_arff(X, y, column_names, categoricals):
+    y = np.reshape(y, (len(y), 1))
+    data = np.concatenate((X, y), axis=1)
+    attributes = []
+    for idx, column_name in enumerate(column_names):
+        attributes.append((column_name, 'NUMERIC'))
+    attributes.append(('y', 'NUMERIC'))
+
+    arff_dict = {}
+    arff_dict['data'] = data
+    arff_dict['attributes'] = attributes
+    arff_dict['description'] = 'emm'
+    arff_dict['relation'] = 'emm'
+
+    return arff_dict
