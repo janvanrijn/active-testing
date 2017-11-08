@@ -6,7 +6,10 @@ import pandas as pd
 import pickle
 
 
-def get_X_y_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_directory):
+def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_directory):
+    if 'y' in relevant_parameters:
+        raise ValueError()
+
     try:
         os.makedirs(cache_directory + '/' + str(task_id))
     except FileExistsError:
@@ -53,27 +56,36 @@ def get_X_y_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_d
         if len(hyperparameters) != len(relevant_parameters):
             raise ValueError()
 
-    y = []
-    dataframe = pd.DataFrame(columns=relevant_parameters.keys())
+    all_columns = list(relevant_parameters)
+    all_columns.append('y')
+    dataframe = pd.DataFrame(columns=all_columns)
 
     for run_id, evaluation in evaluations.items():
-        currentX = {}
+        currentXy = {}
         for idx, param in enumerate(relevant_parameters):
-            currentX[param] = json.loads(setup_parameters[evaluation.setup_id][param])
+            currentXy[param] = json.loads(setup_parameters[evaluation.setup_id][param])
+        currentXy['y'] = evaluation.value
 
-        dataframe = dataframe.append(currentX, ignore_index=True)
-        y.append(float(evaluation.value))
-    y = np.array(y)
+        dataframe = dataframe.append(currentXy, ignore_index=True)
 
     if dataframe.shape[0] > num_runs:
         raise ValueError()
-    if dataframe.shape[1] != len(relevant_parameters):
-        raise ValueError()
-    if y.shape[0] > num_runs:
+    if dataframe.shape[1] != len(relevant_parameters) + 1: # plus 1 for y data
         raise ValueError()
 
     dataframe = dataframe.reindex_axis(sorted(dataframe.columns), axis=1)
+
+    return dataframe
+
+
+def get_X_y_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_directory):
+
+    dataframe = get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_directory)
+
     categorical_columns = set(dataframe.columns) - set(dataframe._get_numeric_data().columns)
     categorical_indices = {dataframe.columns.get_loc(col_name) for col_name in categorical_columns}
 
+    y = np.array(dataframe['y'], dtype=np.float)
+
+    dataframe.drop('y', 1, inplace=True)
     return dataframe.as_matrix(), y, dataframe.columns.values, categorical_indices

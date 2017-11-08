@@ -1,10 +1,11 @@
 import activetesting
 import arff
 import argparse
+import json
 import numpy as np
 import openml
-import json
 import os
+import pandas
 
 
 def parse_args():
@@ -26,31 +27,39 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     study = openml.study.get_study(args.study_id, 'tasks')
-    X_all = None
-    y_all = None
-    column_names_all = None
-    for task in study.tasks:
-        print(task)
-        X, y, column_names, categoricals = activetesting.utils.get_X_y_from_openml(task_id=task,
-                                                                                   flow_id=args.flow_id,
-                                                                                   num_runs=args.num_runs,
-                                                                                   relevant_parameters=args.relevant_parameters,
-                                                                                   cache_directory=args.cache_directory)
-        if X_all is None:
-            X_all = X
-            y_all = y
-            column_names_all = column_names
+    setup_data_all = None
+
+    for task_id in study.tasks:
+        print("Currently processing task", task_id)
+        setup_data = activetesting.utils.get_dataframe_from_openml(task_id=task_id,
+                                                                  flow_id=args.flow_id,
+                                                                  num_runs=args.num_runs,
+                                                                  relevant_parameters=args.relevant_parameters,
+                                                                  cache_directory=args.cache_directory)
+        setup_data['task_id'] = task_id
+        if setup_data_all is None:
+            setup_data_all = setup_data
         else:
-            X_all = np.concatenate((X_all, X))
-            y_all = np.concatenate((y_all, y))
-            if list(column_names) != list(column_names_all):
+            if list(setup_data.columns.values) != list(setup_data_all.columns.values):
                 raise ValueError()
 
-    if len(y_all) < args.num_runs * len(study.tasks) * 0.25:
+            setup_data_all = pandas.concat((setup_data_all, setup_data))
+
+    if len(setup_data_all) < args.num_runs * len(study.tasks) * 0.25:
         raise ValueError('Num results suspiciously low. Please check.')
 
+    task_qualities = {}
+    for task_id in study.tasks:
+        task = openml.tasks.get_task(task_id)
+        task_qualities[task_id] = task.get_dataset().qualities
+    # index of qualities: the task id
+    qualities_with_na = pandas.DataFrame.from_dict(task_qualities, orient='index', dtype=np.float)
+    qualities = pandas.DataFrame.dropna(qualities_with_na, axis=1, how='any')
 
-    arff_dict = activetesting.utils.X_and_y_to_arff(X_all, y_all, column_names, categoricals)
+    meta_data = setup_data_all.join(qualities, on='task_id', how='inner')
+    print(meta_data)
+
+    arff_dict = activetesting.utils.dataframe_to_arff(meta_data)
     filename = 'res.arff'
     with open(filename, 'w') as fp:
         arff.dump(arff_dict, fp)

@@ -2,8 +2,6 @@ import activetesting
 import numpy as np
 import warnings
 
-from scipy.stats import rankdata
-
 
 def modelbased_tablelookup_active_testing(task_ids, holdout_task_id, flow_id, num_runs, relevant_parameters, cache_controller, cache_directory, prevent_model_cache=False):
     X_test, y_test, column_names_test, cat_test = activetesting.utils.get_X_y_from_openml(task_id=holdout_task_id,

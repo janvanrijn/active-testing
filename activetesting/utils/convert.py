@@ -33,16 +33,17 @@ def X_data_to_list_of_dicts(X, column_names):
     return result
 
 
-def X_and_y_to_arff(X, y, column_names, categoricals):
-    y = np.reshape(y, (len(y), 1))
-    data = np.concatenate((X, y), axis=1)
-    attributes = []
-    for idx, column_name in enumerate(column_names):
-        attributes.append((column_name, 'NUMERIC'))
-    attributes.append(('y', 'NUMERIC'))
+def dataframe_to_arff(dataframe):
 
-    arff_dict = {}
-    arff_dict['data'] = data
+    attributes = []
+    for idx, column_name in enumerate(dataframe.columns.values):
+        if np.issubdtype(dataframe[column_name].dtype, np.number):
+            attributes.append((column_name, 'NUMERIC'))
+        else:
+            attributes.append((column_name, list(dataframe[column_name].unique())))
+
+    arff_dict = dict()
+    arff_dict['data'] = dataframe.as_matrix()
     arff_dict['attributes'] = attributes
     arff_dict['description'] = 'emm'
     arff_dict['relation'] = 'emm'
