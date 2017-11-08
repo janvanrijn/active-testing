@@ -46,6 +46,10 @@ if __name__ == '__main__':
             if list(column_names) != list(column_names_all):
                 raise ValueError()
 
+    if len(y_all) < args.num_runs * len(study.tasks) * 0.25:
+        raise ValueError('Num results suspiciously low. Please check.')
+
+
     arff_dict = activetesting.utils.X_and_y_to_arff(X_all, y_all, column_names, categoricals)
     filename = 'res.arff'
     with open(filename, 'w') as fp:
