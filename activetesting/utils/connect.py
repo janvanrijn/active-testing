@@ -11,13 +11,13 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
         raise ValueError()
 
     try:
-        os.makedirs(cache_directory + '/' + str(task_id))
+        os.makedirs(cache_directory + '/' + str(flow_id) + '/' + str(task_id))
     except FileExistsError:
         pass
 
     # grab num_runs random evaluations
-    evaluations_cache_path = cache_directory + '/' + str(task_id) + '/evaluations.pkl'
-    setups_cache_path = cache_directory + '/' + str(task_id) + '/setups.pkl'
+    evaluations_cache_path = cache_directory + '/' + str(flow_id) + '/' + str(task_id) + '/evaluations.pkl'
+    setups_cache_path = cache_directory + '/' + str(flow_id) + '/' + str(task_id) + '/setups.pkl'
     if not os.path.isfile(evaluations_cache_path) or not os.path.isfile(setups_cache_path):
         evaluations = openml.evaluations.list_evaluations(evaluation_measure, size=num_runs, task=[task_id], flow=[flow_id])
         with open(evaluations_cache_path, 'wb') as fp:
@@ -54,7 +54,7 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
             hyperparameters[name] = value
         setup_parameters[setup_id] = hyperparameters
         if len(hyperparameters) != len(relevant_parameters):
-            raise ValueError()
+            raise ValueError('Obtained parameters not complete. Missing: %s' %(str(hyperparameters - relevant_parameters)))
 
     all_columns = list(relevant_parameters)
     all_columns.append('y')

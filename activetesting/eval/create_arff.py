@@ -13,8 +13,7 @@ def parse_args():
     parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
                         help='directory to store cache')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
-    parser.add_argument('--flow_id', type=int, default=7707, help='openml flow id')
-    parser.add_argument('--relevant_parameters', type=json.loads, default='{"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric", "tol": "numeric"}')
+    parser.add_argument('--classifier', type=str, default='adaboost', help='openml flow id')
     parser.add_argument('--scoring', type=str, default='predictive_accuracy')
     parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
@@ -29,12 +28,26 @@ if __name__ == '__main__':
     study = openml.study.get_study(args.study_id, 'tasks')
     setup_data_all = None
 
+    if args.classifier == 'random_forest':
+        flow_id = 6969
+        relevant_parameters = {"bootstrap": "nominal", "max_features": "numeric", "min_samples_leaf": "numeric",
+         "min_samples_split": "numeric", "criterion": "nominal", "strategy": "nominal"}
+    elif args.classifier == 'adaboost':
+        flow_id = 6970
+        relevant_parameters = {"algorithm": "nominal", "learning_rate": "numeric", "max_depth": "numeric",
+                               "iterations": "numeric", "strategy": "nominal"}
+    elif args.classifier == 'libsvm_svc':
+        flow_id = 7707
+        relevant_parameters = {"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric", "tol": "numeric"}
+    else:
+        raise ValueError()
+
     for task_id in study.tasks:
         print("Currently processing task", task_id)
         setup_data = activetesting.utils.get_dataframe_from_openml(task_id=task_id,
-                                                                  flow_id=args.flow_id,
+                                                                  flow_id=flow_id,
                                                                   num_runs=args.num_runs,
-                                                                  relevant_parameters=args.relevant_parameters,
+                                                                  relevant_parameters=relevant_parameters,
                                                                   evaluation_measure=args.scoring,
                                                                   cache_directory=args.cache_directory)
         setup_data['task_id'] = task_id
@@ -61,6 +74,6 @@ if __name__ == '__main__':
     print(meta_data)
 
     arff_dict = activetesting.utils.dataframe_to_arff(meta_data)
-    filename = 'res.arff'
+    filename = 'meta_%s.arff' %args.classifier
     with open(filename, 'w') as fp:
         arff.dump(arff_dict, fp)
