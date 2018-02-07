@@ -13,9 +13,9 @@ def parse_args():
     parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
                         help='directory to store cache')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
-    parser.add_argument('--flow_id', type=int, default=6952, help='openml flow id')
+    parser.add_argument('--flow_id', type=int, default=7707, help='openml flow id')
     parser.add_argument('--relevant_parameters', type=json.loads, default='{"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric", "tol": "numeric"}')
-    parser.add_argument('--scoring', type=str, default='neg_mean_absolute_error')
+    parser.add_argument('--scoring', type=str, default='predictive_accuracy')
     parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
@@ -35,6 +35,7 @@ if __name__ == '__main__':
                                                                   flow_id=args.flow_id,
                                                                   num_runs=args.num_runs,
                                                                   relevant_parameters=args.relevant_parameters,
+                                                                  evaluation_measure=args.scoring,
                                                                   cache_directory=args.cache_directory)
         setup_data['task_id'] = task_id
         if setup_data_all is None:

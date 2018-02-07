@@ -6,7 +6,7 @@ import pandas as pd
 import pickle
 
 
-def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, cache_directory):
+def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, evaluation_measure, cache_directory):
     if 'y' in relevant_parameters:
         raise ValueError()
 
@@ -19,7 +19,7 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, c
     evaluations_cache_path = cache_directory + '/' + str(task_id) + '/evaluations.pkl'
     setups_cache_path = cache_directory + '/' + str(task_id) + '/setups.pkl'
     if not os.path.isfile(evaluations_cache_path) or not os.path.isfile(setups_cache_path):
-        evaluations = openml.evaluations.list_evaluations('predictive_accuracy', size=num_runs, task=[task_id], flow=[flow_id])
+        evaluations = openml.evaluations.list_evaluations(evaluation_measure, size=num_runs, task=[task_id], flow=[flow_id])
         with open(evaluations_cache_path, 'wb') as fp:
             pickle.dump(evaluations, fp)
 
