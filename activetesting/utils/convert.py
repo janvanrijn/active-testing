@@ -40,7 +40,8 @@ def dataframe_to_arff(dataframe):
         if np.issubdtype(dataframe[column_name].dtype, np.number):
             attributes.append((column_name, 'NUMERIC'))
         else:
-            attributes.append((column_name, list(dataframe[column_name].unique())))
+            values = dataframe[column_name].unique()
+            attributes.append((column_name, [str(value) for value in values]))
 
     arff_dict = dict()
     arff_dict['data'] = dataframe.as_matrix()

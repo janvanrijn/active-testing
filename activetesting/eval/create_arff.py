@@ -13,13 +13,13 @@ def parse_args():
     parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
                         help='directory to store cache')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
-    parser.add_argument('--classifier', type=str, default='adaboost', help='openml flow id')
+    parser.add_argument('--classifier', type=str, default='random_forest', help='openml flow id')
     parser.add_argument('--scoring', type=str, default='predictive_accuracy')
     parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
     parser.add_argument('--openml_apikey', type=str, default=None, help='the apikey to authenticate to OpenML')
-    parser.add_argument('--num_tasks', type=int, default=5, help='limit number of tasks (for testing)')
+    parser.add_argument('--num_tasks', type=int, default=None, help='limit number of tasks (for testing)')
     return parser.parse_args()
 
 
@@ -35,14 +35,18 @@ if __name__ == '__main__':
     elif args.classifier == 'adaboost':
         flow_id = 6970
         relevant_parameters = {"algorithm": "nominal", "learning_rate": "numeric", "max_depth": "numeric",
-                               "iterations": "numeric", "strategy": "nominal"}
+                               "n_estimators": "numeric", "strategy": "nominal"}
     elif args.classifier == 'libsvm_svc':
         flow_id = 7707
         relevant_parameters = {"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric", "tol": "numeric"}
     else:
         raise ValueError()
 
-    for task_id in study.tasks:
+    relevant_tasks = study.tasks
+    if args.num_tasks:
+        relevant_tasks = study.tasks[:args.num_tasks]
+
+    for task_id in relevant_tasks:
         print("Currently processing task", task_id)
         setup_data = activetesting.utils.get_dataframe_from_openml(task_id=task_id,
                                                                   flow_id=flow_id,
@@ -59,11 +63,11 @@ if __name__ == '__main__':
 
             setup_data_all = pandas.concat((setup_data_all, setup_data))
 
-    if len(setup_data_all) < args.num_runs * len(study.tasks) * 0.25:
+    if len(setup_data_all) < args.num_runs * len(relevant_tasks) * 0.25:
         raise ValueError('Num results suspiciously low. Please check.')
 
     task_qualities = {}
-    for task_id in study.tasks:
+    for task_id in relevant_tasks:
         task = openml.tasks.get_task(task_id)
         task_qualities[task_id] = task.get_dataset().qualities
     # index of qualities: the task id
@@ -71,7 +75,6 @@ if __name__ == '__main__':
     qualities = pandas.DataFrame.dropna(qualities_with_na, axis=1, how='any')
 
     meta_data = setup_data_all.join(qualities, on='task_id', how='inner')
-    print(meta_data)
 
     arff_dict = activetesting.utils.dataframe_to_arff(meta_data)
     filename = 'meta_%s.arff' %args.classifier

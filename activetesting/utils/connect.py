@@ -54,7 +54,7 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
             hyperparameters[name] = value
         setup_parameters[setup_id] = hyperparameters
         if len(hyperparameters) != len(relevant_parameters):
-            raise ValueError('Obtained parameters not complete. Missing: %s' %(str(hyperparameters - relevant_parameters)))
+            raise ValueError('Obtained parameters not complete. Missing: %s' %(str(relevant_parameters.keys() - hyperparameters.keys())))
 
     all_columns = list(relevant_parameters)
     all_columns.append('y')
@@ -62,11 +62,29 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
 
     for run_id, evaluation in evaluations.items():
         currentXy = {}
+        legalConfig = True
         for idx, param in enumerate(relevant_parameters):
-            currentXy[param] = json.loads(setup_parameters[evaluation.setup_id][param])
+            value = json.loads(setup_parameters[evaluation.setup_id][param])
+            if relevant_parameters[param] == 'numeric':
+                if not (isinstance(value, int) or isinstance(value, float)):
+                    legalConfig = False
+
+            currentXy[param] = value
+
         currentXy['y'] = evaluation.value
 
-        dataframe = dataframe.append(currentXy, ignore_index=True)
+        if legalConfig:
+            dataframe = dataframe.append(currentXy, ignore_index=True)
+        else:
+            # sometimes, a numeric param can contain string values. keep these out?
+            print('skipping', currentXy)
+
+    all_numeric_columns = list(['y'])
+    for parameter, datatype in relevant_parameters.items():
+        if datatype == 'numeric':
+            all_numeric_columns.append(parameter)
+
+    dataframe[all_numeric_columns] = dataframe[all_numeric_columns].apply(pd.to_numeric)
 
     if dataframe.shape[0] > num_runs:
         raise ValueError()
