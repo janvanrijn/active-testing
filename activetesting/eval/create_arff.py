@@ -48,12 +48,16 @@ if __name__ == '__main__':
 
     for task_id in relevant_tasks:
         print("Currently processing task", task_id)
-        setup_data = activetesting.utils.get_dataframe_from_openml(task_id=task_id,
-                                                                  flow_id=flow_id,
-                                                                  num_runs=args.num_runs,
-                                                                  relevant_parameters=relevant_parameters,
-                                                                  evaluation_measure=args.scoring,
-                                                                  cache_directory=args.cache_directory)
+        try:
+            setup_data = activetesting.utils.get_dataframe_from_openml(task_id=task_id,
+                                                                      flow_id=flow_id,
+                                                                      num_runs=args.num_runs,
+                                                                      relevant_parameters=relevant_parameters,
+                                                                      evaluation_measure=args.scoring,
+                                                                      cache_directory=args.cache_directory)
+        except ValueError as e:
+            print('No evaluations for this task. ')
+            continue
         setup_data['task_id'] = task_id
         if setup_data_all is None:
             setup_data_all = setup_data

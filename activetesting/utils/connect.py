@@ -20,6 +20,9 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
     setups_cache_path = cache_directory + '/' + str(flow_id) + '/' + str(task_id) + '/setups.pkl'
     if not os.path.isfile(evaluations_cache_path) or not os.path.isfile(setups_cache_path):
         evaluations = openml.evaluations.list_evaluations(evaluation_measure, size=num_runs, task=[task_id], flow=[flow_id])
+        if len(evaluations) == 0:
+            raise ValueError('No evaluations for this task. ')
+
         with open(evaluations_cache_path, 'wb') as fp:
             pickle.dump(evaluations, fp)
 
