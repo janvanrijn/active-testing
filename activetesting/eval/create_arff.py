@@ -39,6 +39,9 @@ if __name__ == '__main__':
     elif args.classifier == 'libsvm_svc':
         flow_id = 7707
         relevant_parameters = {"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric", "tol": "numeric"}
+    elif args.classifier == 'ranger':
+        flow_id = 5965
+        relevant_parameters = {"min.node.size": "numeric", "num.trees": "numeric"} # TODO: extend!
     else:
         raise ValueError()
 
@@ -56,7 +59,7 @@ if __name__ == '__main__':
                                                                       evaluation_measure=args.scoring,
                                                                       cache_directory=args.cache_directory)
         except ValueError as e:
-            print('No evaluations for this task. ')
+            print('Problem in task %d:' %task_id, e)
             continue
         setup_data['task_id'] = task_id
         if setup_data_all is None:

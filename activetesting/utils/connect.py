@@ -57,7 +57,7 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
             hyperparameters[name] = value
         setup_parameters[setup_id] = hyperparameters
         if len(hyperparameters) != len(relevant_parameters):
-            raise ValueError('Obtained parameters not complete. Missing: %s' %(str(relevant_parameters.keys() - hyperparameters.keys())))
+            raise ValueError('Obtained parameters not complete. Setup id %d missing: %s' %(setup_id, str(relevant_parameters.keys() - hyperparameters.keys())))
 
     all_columns = list(relevant_parameters)
     all_columns.append('y')
