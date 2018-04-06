@@ -6,6 +6,7 @@ import numpy as np
 import openml
 import os
 import pandas
+import sklearn
 
 
 def parse_args():
@@ -15,7 +16,8 @@ def parse_args():
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
     parser.add_argument('--classifier', type=str, default='random_forest', help='openml flow id')
     parser.add_argument('--scoring', type=str, default='predictive_accuracy')
-    parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
+    parser.add_argument('--num_runs', type=int, default=250, help='max runs to obtain from openml')
+    parser.add_argument('--normalize', action='store_true', help='normalizes y values per task')
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
     parser.add_argument('--openml_apikey', type=str, default=None, help='the apikey to authenticate to OpenML')
@@ -27,6 +29,7 @@ if __name__ == '__main__':
     args = parse_args()
     study = openml.study.get_study(args.study_id, 'tasks')
     setup_data_all = None
+    scaler = sklearn.preprocessing.MinMaxScaler()
 
     if args.classifier == 'random_forest':
         flow_id = 6969
@@ -67,6 +70,8 @@ if __name__ == '__main__':
         else:
             if list(setup_data.columns.values) != list(setup_data_all.columns.values):
                 raise ValueError()
+            if args.normalize:
+                setup_data[['y']] = scaler.fit_transform(setup_data[['y']])
 
             setup_data_all = pandas.concat((setup_data_all, setup_data))
 
