@@ -14,7 +14,7 @@ def parse_args():
     parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
                         help='directory to store cache')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
-    parser.add_argument('--classifier', type=str, default='random_forest', help='openml flow id')
+    parser.add_argument('--classifier', type=str, default='libsvm_svc', help='openml flow id')
     parser.add_argument('--scoring', type=str, default='predictive_accuracy')
     parser.add_argument('--num_runs', type=int, default=250, help='max runs to obtain from openml')
     parser.add_argument('--normalize', action='store_true', help='normalizes y values per task')

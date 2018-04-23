@@ -94,7 +94,7 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
     if dataframe.shape[1] != len(relevant_parameters) + 1: # plus 1 for y data
         raise ValueError()
 
-    dataframe = dataframe.reindex_axis(sorted(dataframe.columns), axis=1)
+    dataframe = dataframe.reindex(sorted(dataframe.columns), axis=1)
 
     return dataframe
 
