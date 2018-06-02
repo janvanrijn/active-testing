@@ -1,0 +1,6 @@
+numpy
+matplotlib
+openml-python
+git+https://github.com/openml/openml-python-contrib.git
+pandas
+scipy
