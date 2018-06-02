@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import openml
+import openmlcontrib
 import os
 import pandas as pd
 import pickle
@@ -16,8 +17,8 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
         pass
 
     # grab num_runs random evaluations
-    evaluations_cache_path = cache_directory + '/' + str(flow_id) + '/' + str(task_id) + '/evaluations.pkl'
-    setups_cache_path = cache_directory + '/' + str(flow_id) + '/' + str(task_id) + '/setups.pkl'
+    evaluations_cache_path = cache_directory + '/' + str(flow_id) + '/' + str(task_id) + '/evaluations_%d.pkl' % num_runs
+    setups_cache_path = cache_directory + '/' + str(flow_id) + '/' + str(task_id) + '/setups_%d.pkl' % num_runs
     if not os.path.isfile(evaluations_cache_path) or not os.path.isfile(setups_cache_path):
         evaluations = openml.evaluations.list_evaluations(evaluation_measure, size=num_runs, task=[task_id], flow=[flow_id])
         if len(evaluations) == 0:
@@ -30,7 +31,7 @@ def get_dataframe_from_openml(task_id, flow_id, num_runs, relevant_parameters, e
         setup_ids = []
         for run_id, evaluation in evaluations.items():
             setup_ids.append(evaluation.setup_id)
-        setups = openml.setups.list_setups(setup=setup_ids)
+        setups = openmlcontrib.setups.obtain_setups_by_ids(setup_ids=setup_ids)
 
         with open(setups_cache_path, 'wb') as fp:
             pickle.dump(setups, fp)
