@@ -1,7 +1,6 @@
 import activetesting
 import arff
 import argparse
-import json
 import numpy as np
 import openml
 import os
@@ -10,13 +9,15 @@ import sklearn
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Surrogated Active Testing')
+    parser = argparse.ArgumentParser(description='Creates an ARFF file')
     parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
                         help='directory to store cache')
+    parser.add_argument('--output_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
+                        help='directory to store output')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
     parser.add_argument('--classifier', type=str, default='libsvm_svc', help='openml flow id')
     parser.add_argument('--scoring', type=str, default='predictive_accuracy')
-    parser.add_argument('--num_runs', type=int, default=250, help='max runs to obtain from openml')
+    parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
     parser.add_argument('--normalize', action='store_true', help='normalizes y values per task')
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
@@ -34,17 +35,18 @@ if __name__ == '__main__':
     if args.classifier == 'random_forest':
         flow_id = 6969
         relevant_parameters = {"bootstrap": "nominal", "max_features": "numeric", "min_samples_leaf": "numeric",
-         "min_samples_split": "numeric", "criterion": "nominal", "strategy": "nominal"}
+                               "min_samples_split": "numeric", "criterion": "nominal", "strategy": "nominal"}
     elif args.classifier == 'adaboost':
         flow_id = 6970
         relevant_parameters = {"algorithm": "nominal", "learning_rate": "numeric", "max_depth": "numeric",
                                "n_estimators": "numeric", "strategy": "nominal"}
     elif args.classifier == 'libsvm_svc':
         flow_id = 7707
-        relevant_parameters = {"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric", "tol": "numeric"}
+        relevant_parameters = {"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric",
+                               "tol": "numeric"}
     elif args.classifier == 'ranger':
         flow_id = 5965
-        relevant_parameters = {"min.node.size": "numeric", "num.trees": "numeric"} # TODO: extend!
+        relevant_parameters = {"min.node.size": "numeric", "num.trees": "numeric"}  # TODO: extend!
     else:
         raise ValueError()
 
@@ -56,11 +58,11 @@ if __name__ == '__main__':
         print("Currently processing task", task_id)
         try:
             setup_data = activetesting.utils.get_dataframe_from_openml(task_id=task_id,
-                                                                      flow_id=flow_id,
-                                                                      num_runs=args.num_runs,
-                                                                      relevant_parameters=relevant_parameters,
-                                                                      evaluation_measure=args.scoring,
-                                                                      cache_directory=args.cache_directory)
+                                                                       flow_id=flow_id,
+                                                                       num_runs=args.num_runs,
+                                                                       relevant_parameters=relevant_parameters,
+                                                                       evaluation_measure=args.scoring,
+                                                                       cache_directory=args.cache_directory)
         except ValueError as e:
             print('Problem in task %d:' %task_id, e)
             continue
@@ -89,6 +91,6 @@ if __name__ == '__main__':
     meta_data = setup_data_all.join(qualities, on='task_id', how='inner')
 
     arff_dict = activetesting.utils.dataframe_to_arff(meta_data)
-    filename = 'meta_%s.arff' %args.classifier
+    filename = os.path.join(args.output_directory, 'meta_%s.arff' % args.classifier)
     with open(filename, 'w') as fp:
         arff.dump(arff_dict, fp)
