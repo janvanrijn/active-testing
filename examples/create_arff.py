@@ -3,6 +3,7 @@ import arff
 import argparse
 import numpy as np
 import openml
+import openmlcontrib
 import os
 import pandas
 import sklearn
@@ -10,14 +11,14 @@ import sklearn
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Creates an ARFF file')
-    parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
+    parser.add_argument('--cache_directory', type=str, default=os.path.expanduser('~') + '/experiments/openml_cache',
                         help='directory to store cache')
     parser.add_argument('--output_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
                         help='directory to store output')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
-    parser.add_argument('--classifier', type=str, default='libsvm_svc', help='openml flow id')
+    parser.add_argument('--classifier', type=str, default='random_forest', help='openml flow id')
     parser.add_argument('--scoring', type=str, default='predictive_accuracy')
-    parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
+    parser.add_argument('--num_runs', type=int, default=1000, help='max runs to obtain from openml')
     parser.add_argument('--normalize', action='store_true', help='normalizes y values per task')
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
@@ -34,19 +35,13 @@ if __name__ == '__main__':
 
     if args.classifier == 'random_forest':
         flow_id = 6969
-        relevant_parameters = {"bootstrap": "nominal", "max_features": "numeric", "min_samples_leaf": "numeric",
-                               "min_samples_split": "numeric", "criterion": "nominal", "strategy": "nominal"}
+        config_space = activetesting.config_spaces.get_random_forest_default_search_space()
     elif args.classifier == 'adaboost':
         flow_id = 6970
-        relevant_parameters = {"algorithm": "nominal", "learning_rate": "numeric", "max_depth": "numeric",
-                               "n_estimators": "numeric", "strategy": "nominal"}
+        config_space = activetesting.config_spaces.get_adaboost_default_search_space()
     elif args.classifier == 'libsvm_svc':
         flow_id = 7707
-        relevant_parameters = {"C": "numeric", "gamma": "numeric", "kernel": "categorical", "coef0": "numeric",
-                               "tol": "numeric"}
-    elif args.classifier == 'ranger':
-        flow_id = 5965
-        relevant_parameters = {"min.node.size": "numeric", "num.trees": "numeric"}  # TODO: extend!
+        config_space = activetesting.config_spaces.get_libsvm_svc_default_search_space()
     else:
         raise ValueError()
 
@@ -57,12 +52,13 @@ if __name__ == '__main__':
     for task_id in relevant_tasks:
         print("Currently processing task", task_id)
         try:
-            setup_data = activetesting.utils.get_dataframe_from_openml(task_id=task_id,
-                                                                       flow_id=flow_id,
-                                                                       num_runs=args.num_runs,
-                                                                       relevant_parameters=relevant_parameters,
-                                                                       evaluation_measure=args.scoring,
-                                                                       cache_directory=args.cache_directory)
+            setup_data = openmlcontrib.meta.get_task_flow_results_as_dataframe(task_id=task_id,
+                                                                               flow_id=flow_id,
+                                                                               num_runs=args.num_runs,
+                                                                               configuration_space=config_space,
+                                                                               parameter_field='parameter_name',
+                                                                               evaluation_measure=args.scoring,
+                                                                               cache_directory=args.cache_directory)
         except ValueError as e:
             print('Problem in task %d:' %task_id, e)
             continue
