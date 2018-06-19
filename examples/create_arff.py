@@ -86,8 +86,13 @@ if __name__ == '__main__':
 
     meta_data = setup_data_all.join(qualities, on='task_id', how='inner')
 
-    arff_dict = activetesting.utils.dataframe_to_arff(meta_data)
     os.makedirs(args.output_directory, exist_ok=True)
+    # create the task / parameters / performance arff
+    filename = os.path.join(args.output_directory, 'pertask_%s.arff' % args.classifier)
+    with open(filename, 'w') as fp:
+        arff.dump(activetesting.utils.dataframe_to_arff(setup_data_all), fp)
+
+    # create the task / meta-features / parameters / performance arff
     filename = os.path.join(args.output_directory, 'meta_%s.arff' % args.classifier)
     with open(filename, 'w') as fp:
-        arff.dump(arff_dict, fp)
+        arff.dump(activetesting.utils.dataframe_to_arff(meta_data), fp)
