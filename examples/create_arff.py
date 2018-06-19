@@ -16,9 +16,9 @@ def parse_args():
     parser.add_argument('--output_directory', type=str, default=os.path.expanduser('~') + '/experiments/active_testing',
                         help='directory to store output')
     parser.add_argument('--study_id', type=str, default='OpenML100', help='the tag to obtain the tasks from')
-    parser.add_argument('--classifier', type=str, default='random_forest', help='openml flow id')
+    parser.add_argument('--classifier', type=str, default='libsvm_svc', help='openml flow id')
     parser.add_argument('--scoring', type=str, default='predictive_accuracy')
-    parser.add_argument('--num_runs', type=int, default=1000, help='max runs to obtain from openml')
+    parser.add_argument('--num_runs', type=int, default=500, help='max runs to obtain from openml')
     parser.add_argument('--normalize', action='store_true', help='normalizes y values per task')
     parser.add_argument('--prevent_model_cache', action='store_true', help='prevents loading old models from cache')
     parser.add_argument('--openml_server', type=str, default=None, help='the openml server location')
@@ -87,6 +87,7 @@ if __name__ == '__main__':
     meta_data = setup_data_all.join(qualities, on='task_id', how='inner')
 
     arff_dict = activetesting.utils.dataframe_to_arff(meta_data)
+    os.makedirs(args.output_directory, exist_ok=True)
     filename = os.path.join(args.output_directory, 'meta_%s.arff' % args.classifier)
     with open(filename, 'w') as fp:
         arff.dump(arff_dict, fp)
