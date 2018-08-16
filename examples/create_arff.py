@@ -91,15 +91,20 @@ if __name__ == '__main__':
     # create the task / parameters / performance arff
     filename = os.path.join(args.output_directory, 'pertask_%s.arff' % args.classifier)
     relation_name = 'openml-meta-flow-%d' % flow_id
-    json_meta = {'flow_id': flow_id, 'openml_server': openml.config.server}
+    json_meta = {'flow_id': flow_id,
+                 'openml_server': openml.config.server,
+                 'measure': args.scoring,
+                 'normalized_y': args.normalize,
+                 'study_id': args.study_id,
+                 'num_runs': args.num_runs}
     with open(filename, 'w') as fp:
         arff.dump(openmlcontrib.meta.dataframe_to_arff(setup_data_all,
                                                        relation_name,
-                                                       json.dump(json_meta)), fp)
+                                                       json.dumps(json_meta)), fp)
 
     # create the task / meta-features / parameters / performance arff
     filename = os.path.join(args.output_directory, 'meta_%s.arff' % args.classifier)
     with open(filename, 'w') as fp:
         arff.dump(openmlcontrib.meta.dataframe_to_arff(setup_data_with_meta_features,
                                                        relation_name,
-                                                       json.dump(json_meta)), fp)
+                                                       json.dumps(json_meta)), fp)
