@@ -1,6 +1,7 @@
 import activetesting
 import arff
 import argparse
+import json
 import numpy as np
 import openml
 import openmlcontrib
@@ -84,15 +85,21 @@ if __name__ == '__main__':
     qualities_with_na = pandas.DataFrame.from_dict(task_qualities, orient='index', dtype=np.float)
     qualities = pandas.DataFrame.dropna(qualities_with_na, axis=1, how='any')
 
-    meta_data = setup_data_all.join(qualities, on='task_id', how='inner')
+    setup_data_with_meta_features = setup_data_all.join(qualities, on='task_id', how='inner')
 
     os.makedirs(args.output_directory, exist_ok=True)
     # create the task / parameters / performance arff
     filename = os.path.join(args.output_directory, 'pertask_%s.arff' % args.classifier)
+    relation_name = 'openml-meta-flow-%d' % flow_id
+    json_meta = {'flow_id': flow_id, 'openml_server': openml.config.server}
     with open(filename, 'w') as fp:
-        arff.dump(activetesting.utils.dataframe_to_arff(setup_data_all), fp)
+        arff.dump(openmlcontrib.meta.dataframe_to_arff(setup_data_all,
+                                                       relation_name,
+                                                       json.dump(json_meta)), fp)
 
     # create the task / meta-features / parameters / performance arff
     filename = os.path.join(args.output_directory, 'meta_%s.arff' % args.classifier)
     with open(filename, 'w') as fp:
-        arff.dump(activetesting.utils.dataframe_to_arff(meta_data), fp)
+        arff.dump(openmlcontrib.meta.dataframe_to_arff(setup_data_with_meta_features,
+                                                       relation_name,
+                                                       json.dump(json_meta)), fp)

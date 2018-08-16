@@ -30,22 +30,3 @@ def X_data_to_list_of_dicts(X, column_names):
             current_dict[column_names[feature_idx]] = observation[feature_idx]
         result.append(current_dict)
     return result
-
-
-def dataframe_to_arff(dataframe):
-
-    attributes = []
-    for idx, column_name in enumerate(dataframe.columns.values):
-        if np.issubdtype(dataframe[column_name].dtype, np.number):
-            attributes.append((column_name, 'NUMERIC'))
-        else:
-            values = dataframe[column_name].unique()
-            attributes.append((column_name, [str(value) for value in values]))
-
-    arff_dict = dict()
-    arff_dict['data'] = dataframe.as_matrix()
-    arff_dict['attributes'] = attributes
-    arff_dict['description'] = 'emm'
-    arff_dict['relation'] = 'emm'
-
-    return arff_dict
