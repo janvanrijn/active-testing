@@ -1,3 +1,3 @@
-from activetesting import config_spaces
-from activetesting import strategies
-from activetesting import utils
+from . import config_spaces
+from . import strategies
+from . import utils

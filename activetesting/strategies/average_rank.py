@@ -1,15 +1,26 @@
 import activetesting
+import ConfigSpace
 import numpy as np
+import typing
 import warnings
 
 from scipy.stats import rankdata
 
 
-def modelbased_tablelookup_average_ranking(task_ids, holdout_task_id, flow_id, num_runs, relevant_parameters, cache_controller, cache_directory, prevent_model_cache=False):
+def modelbased_tablelookup_average_ranking(task_ids: typing.List,
+                                           holdout_task_id: int,
+                                           flow_id: int,
+                                           num_runs: int,
+                                           config_space: ConfigSpace.ConfigurationSpace,
+                                           evaluation_measure: str,
+                                           cache_controller,
+                                           cache_directory: str,
+                                           prevent_model_cache: bool=False):
     X_test, y_test, column_names_test, cat_test = activetesting.utils.get_X_y_from_openml(task_id=holdout_task_id,
                                                                                           flow_id=flow_id,
                                                                                           num_runs=num_runs,
-                                                                                          relevant_parameters=relevant_parameters,
+                                                                                          config_space=config_space,
+                                                                                          evaluation_measure=evaluation_measure,
                                                                                           cache_directory=cache_directory)
     X_test, cat_mapping = activetesting.utils.encode_categoricals(X_test, cat_test)
     total_ranks = np.zeros(len(X_test))
@@ -23,7 +34,8 @@ def modelbased_tablelookup_average_ranking(task_ids, holdout_task_id, flow_id, n
         X_train, y_train, column_names_train, cat_train = activetesting.utils.get_X_y_from_openml(task_id=task_id,
                                                                                                   flow_id=flow_id,
                                                                                                   num_runs=num_runs,
-                                                                                                  relevant_parameters=relevant_parameters,
+                                                                                                  config_space=config_space,
+                                                                                                  evaluation_measure=evaluation_measure,
                                                                                                   cache_directory=cache_directory)
         if cat_train != cat_test:
             raise ValueError()
