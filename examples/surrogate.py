@@ -46,7 +46,7 @@ if __name__ == '__main__':
         flow_id = 6970
         config_space = activetesting.config_spaces.get_adaboost_default_search_space()
     elif args.classifier == 'libsvm_svc':
-        flow_id = 6952
+        flow_id = 7707
         config_space = activetesting.config_spaces.get_libsvm_svc_default_search_space()
     else:
         raise ValueError()
